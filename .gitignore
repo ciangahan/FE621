@@ -1,0 +1,48 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyd
+*.whl
+
+# Distributions and packaging
+.Python
+build/
+dist/
+eggs/
+*.egg-info/
+.install.lock
+# poetry
+.venv/
+# pipenv
+.env/
+# pdm
+.pdm-build/
+
+# Unit test and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.nox/
+.tox/
+# nose
+nosetests.xml
+# coverage
+coverage.xml
+# teamcity
+teamcity-*.patch
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.results
+
+# Editor directories and files
+.idea/         # JetBrains IDEs (PyCharm, etc)
+.vscode/       # VS Code
+*.swp
+*.sublime-workspace
+*.sublime-project
+
+# OS-specific
+.DS_Store      # macOS
+thumbs.db      # Windows
