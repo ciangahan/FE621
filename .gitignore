@@ -46,3 +46,7 @@ dmypy.results
 # OS-specific
 .DS_Store      # macOS
 thumbs.db      # Windows
+
+# Data
+data/raw/*
+data/cleaned/*
