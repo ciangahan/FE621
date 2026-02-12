@@ -50,3 +50,5 @@ thumbs.db      # Windows
 # Data
 data/raw/*
 data/cleaned/*
+!data/cleaned/.gitkeep
+!data/raw/.gitkeep
