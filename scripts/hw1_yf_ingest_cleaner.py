@@ -49,7 +49,7 @@ def clean_options():
         dataframes.append(df)
 
     options = pd.concat(dataframes)
-    # I will use the mid-price (bid + ask) / 2 as the option's value, discarding all other info
+    # I will use the mid-price (bid + ask) / 2 as the option's value, so discarding all other info
     options = options[[
         "contractSymbol",
         "strike",
@@ -76,5 +76,5 @@ def clean_options():
 
 
 if __name__ == "__main__":
-    # clean_current_prices()
+    clean_current_prices()
     clean_options()
