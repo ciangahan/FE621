@@ -44,7 +44,7 @@ dmypy.results
 *.sublime-project
 
 # OS-specific
-.DS_Store      # macOS
+**/.DS_Store      # macOS
 thumbs.db      # Windows
 
 # Data
@@ -52,3 +52,6 @@ data/raw/*
 data/cleaned/*
 !data/cleaned/.gitkeep
 !data/raw/.gitkeep
+
+# Test
+scratch/*

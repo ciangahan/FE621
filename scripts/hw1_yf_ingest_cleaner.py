@@ -61,8 +61,13 @@ def clean_options():
         "data_date"
     ]].sort_values(by=["data_date", "expiration", "underlying", "optionType", "strike"])
 
+    options["expiration"] = pd.to_datetime(options["expiration"])
+    options["data_date"] = pd.to_datetime(options["data_date"])
+
+    options["daysToMaturity"] = (options["expiration"] - options["data_date"]).dt.days
+
     # to clean the data further, I will remove any options without posted quotes
-    # this is primarily deep ITM options with less interest from traders
+    # this is primarily deep ITM options with low interest from traders
     print(f"Removing {len(options[(options["bid"] == 0) & (options["ask"] == 0)])} options with no posted quotes")
 
     options = options[(options["bid"] != 0) | (options["ask"] != 0)]
