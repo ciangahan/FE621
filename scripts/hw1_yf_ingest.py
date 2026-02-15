@@ -1,6 +1,8 @@
 import yfinance as yf
 import pandas as pd
 
+from datetime import datetime
+
 def ingest_options(ticker:str, months:int = 3, option_day_offset:int = 0):
     """
     Ingest options data for a given ticker, including only traditional expiry dates (3rd friday of the month)
@@ -35,7 +37,8 @@ def ingest_options(ticker:str, months:int = 3, option_day_offset:int = 0):
         options_df['underlying'] = ticker
         
         # save to csv
-        filename = f"data/raw/{ticker}_options_{expiration}.csv"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"data/raw/{ticker}_options_{expiration}_{timestamp}.csv"
         options_df.to_csv(filename, index=False)
         print(f"Saved {len(options_df)} rows to {filename}")
     
