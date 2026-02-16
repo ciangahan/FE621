@@ -27,7 +27,7 @@ def clean_current_prices():
     current_prices.index = pd.to_datetime(current_prices.index).normalize().date
 
     # temporarily hardcode fed funds rate in the df as both days are same
-    current_prices["fed_funds"] = 0.0364
+    current_prices["fedFunds"] = 0.0364
 
     current_prices.to_csv(f"./data/cleaned/current_prices.csv")
 
@@ -45,7 +45,6 @@ def clean_options():
     for file_path in option_files:
         df = pd.read_csv(file_path)
         df["data_date"] = pd.to_datetime(file_path.stem.split("_")[-2])
-        print(df.head())
         dataframes.append(df)
 
     options = pd.concat(dataframes)
@@ -69,10 +68,21 @@ def clean_options():
     # to clean the data further, I will remove any options without posted quotes
     # this is primarily deep ITM options with low interest from traders
     print(f"Removing {len(options[(options["bid"] == 0) & (options["ask"] == 0)])} options with no posted quotes")
-
     options = options[(options["bid"] != 0) | (options["ask"] != 0)]
 
-    options.to_csv("data/cleaned/options.csv")
+    # Attach current price and fed funds rate for each asset from current_prices.csv
+    try:
+        current_prices = pd.read_csv("data/cleaned/current_prices.csv", index_col=0)
+        current_prices["data_date"] = pd.to_datetime(current_prices.index)
+        options = pd.merge(
+            options, current_prices, how="left", 
+            left_on=["underlying", "data_date"], right_on=["ticker", "data_date"]
+        ).drop("ticker", axis=1)
+        options.rename(columns={"Close": "underlyingPrice"}, inplace=True)
+        
+    finally:
+        # in error case (current prices doesnt exist, etc) just save the options data
+        options.to_csv("data/cleaned/options.csv")
 
 
 if __name__ == "__main__":
