@@ -45,6 +45,7 @@ dmypy.results
 
 # OS-specific
 **/.DS_Store      # macOS
+*.DS_Store
 thumbs.db      # Windows
 
 # Data
