@@ -1,7 +1,5 @@
 import numpy as np
 
-from FE621.pricing.black_scholes import BlackScholes
-
 class BinomialTree():
     """
     Additive binomial tree pricing model with identical up/down step sizes
@@ -201,13 +199,11 @@ class TrinomialTree():
                     )
 
                     option_tree[j, i] = hold_val
-        
-        # print(option_tree)
 
         return option_tree[self.n, 0]
 
     
-    def price_barrier_option_knock_in(self, K: float, H: float, call: bool) -> np.float64:
+    def price_barrier_option_knock_in(self, K: float, H: float, call: bool, american: bool) -> np.float64:
         """
         Price a european knock in barrier call/put option with the given stock tree
 
@@ -251,11 +247,16 @@ class TrinomialTree():
             for j in range(self.n - i, self.n + i + 1):
                 stock_val = np.exp(self.stock_tree[j, i])
 
-                option_tree_hit[j, i] = self.disc * (
+                hit_hold_val = self.disc * (
                     self.p_u * option_tree_hit[j - 1, i + 1] + 
                     self.p_m * option_tree_hit[j, i + 1] + 
                     self.p_d * option_tree_hit[j + 1, i + 1]
                 )
+
+                if american:
+                    option_tree_hit[j, i] = max(hit_hold_val, max(stock_val - K, 0) if call else max(K - stock_val, 0))
+                else:
+                    option_tree_hit[j, i] = hit_hold_val
 
                 # if not currently across barrier, fill in no-hit case
                 if (stock_val <= H and up) or (stock_val >= H and not up):
@@ -288,10 +289,6 @@ class TrinomialTree():
                                 self.p_m * option_tree_no_hit[j, i + 1] + 
                                 self.p_d * option_tree_no_hit[j + 1, i + 1]
                             )
-        
-        # print("H", np.log(H))
-        # print(option_tree_hit)
-        # print(option_tree_no_hit)
 
         return option_tree_no_hit[self.n, 0]
 
@@ -317,7 +314,7 @@ if __name__ == "__main__":
 
     # print(bin_tree.stock_tree)
 
-    # print(bin_tree.price_option(K, call=True, american=False))
+    print(bin_tree.price_option(K, call=True, american=False))
     # print(tree.price_option(K, call=False, american=True))
     # print(tree.price_option(K, call=True, american=False))
     # print(tree.price_option(K, call=True, american=True))
@@ -331,11 +328,12 @@ if __name__ == "__main__":
     # print(tree.stock_tree)
 
     print(tree.price_option(K, call=False, american=False)) # at 2 steps, 135 is first tier up
-    up_out = tree.price_barrier_option_knock_out(K, K - 50, call=False)
-    up_in = tree.price_barrier_option_knock_in(K, K - 50, call=False)
-    print(up_out)
-    print(up_in)
-    print(up_out + up_in)
+
+    # up_out = tree.price_barrier_option_knock_out(K, K - 50, call=False)
+    # up_in = tree.price_barrier_option_knock_in(K, K - 50, call=False)
+    # print(up_out)
+    # print(up_in)
+    # print(up_out + up_in)
     # print(tree.price_barrier_option_knock_out(K, K + 10, call=True))
     # print(tree.price_barrier_option_knock_out(K, K + 20, call=True))
     # print(tree.price_barrier_option_knock_out(K, K + 50, call=True))
