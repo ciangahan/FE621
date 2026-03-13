@@ -162,7 +162,7 @@ class TrinomialTree():
         assert self.s0 != H, "Barrier cannot be current option price; use standard option pricing instead"
 
         # first determine whether the barrier is up or down
-        up = self.s0 < H
+        up = self.s0 < np.log(H)
 
         option_tree = np.zeros((2 * self.n + 1, self.n + 1))
 
@@ -171,8 +171,8 @@ class TrinomialTree():
             for j in range(2 * self.n + 1):
                 stock_val = np.exp(self.stock_tree[j, self.n])
 
-                # Barrier cross condition: stock > H and H > S0 or stock < H and H < S0
-                if (stock_val > H) == up:
+                # Barrier cross condition: stock >= H and H > S0 or stock <= H and H < S0
+                if (stock_val >= H and up) or (stock_val <= H and not up):
                     option_tree[j, self.n] = 0
                 else:
                     option_tree[j, self.n] = max(stock_val - K, 0)
@@ -180,7 +180,7 @@ class TrinomialTree():
             for j in range(2 * self.n + 1):
                 stock_val = np.exp(self.stock_tree[j, self.n])
 
-                if (stock_val > H) == up:
+                if (stock_val >= H and up) or (stock_val <= H and not up):
                     option_tree[j, self.n] = 0
                 else:
                     option_tree[j, self.n] = max(K - stock_val, 0)
@@ -191,7 +191,7 @@ class TrinomialTree():
                 stock_val = np.exp(self.stock_tree[j, i])
 
                 # like above, if stock value is above, it and all future paths are "hit"
-                if (stock_val > H) == up:
+                if (stock_val >= H and up) or (stock_val <= H and not up):
                     option_tree[j, self.n] = 0
                 else:
                     hold_val = self.disc * (
@@ -226,11 +226,74 @@ class TrinomialTree():
         assert self.s0 != H, "Barrier cannot be current option price; use standard option pricing instead"
 
         # first determine whether the option is up or down
-        up = self.s0 < H
+        up = self.s0 < np.log(H)
 
         # using two trees: hit state and no hit state as described above
         option_tree_hit = np.zeros((2 * self.n + 1, self.n + 1))
         option_tree_no_hit = np.zeros((2 * self.n + 1, self.n + 1))
+
+        # terminal payoff
+        if call:
+            for j in range(2 * self.n + 1):
+                stock_val = np.exp(self.stock_tree[j, self.n])
+
+                # Barrier cross condition: stock > H and H > S0 or stock < H and H < S0
+                # no-hit terminal payoff is already initialized to zero for all cols
+                option_tree_hit[j, self.n] = max(stock_val - K, 0)
+        else:
+            for j in range(2 * self.n + 1):
+                stock_val = np.exp(self.stock_tree[j, self.n])
+
+                option_tree_hit[j, self.n] = max(K - stock_val, 0)
+
+        # iterate backwards to calculate discounted expected value at each node
+        for i in reversed(range(self.n)):
+            for j in range(self.n - i, self.n + i + 1):
+                stock_val = np.exp(self.stock_tree[j, i])
+
+                option_tree_hit[j, i] = self.disc * (
+                    self.p_u * option_tree_hit[j - 1, i + 1] + 
+                    self.p_m * option_tree_hit[j, i + 1] + 
+                    self.p_d * option_tree_hit[j + 1, i + 1]
+                )
+
+                # if not currently across barrier, fill in no-hit case
+                if (stock_val <= H and up) or (stock_val >= H and not up):
+                    # if up and stock's up move crosses
+                    if up:
+                        up_val = np.exp(self.stock_tree[j - 1, i + 1])
+                        if up_val >= H:
+                            option_tree_no_hit[j, i] = self.disc * (
+                                self.p_u * option_tree_hit[j - 1, i + 1] + 
+                                self.p_m * option_tree_no_hit[j, i + 1] + 
+                                self.p_d * option_tree_no_hit[j + 1, i + 1]
+                            )
+                        else:
+                            option_tree_no_hit[j, i] = self.disc * (
+                                self.p_u * option_tree_no_hit[j - 1, i + 1] + 
+                                self.p_m * option_tree_no_hit[j, i + 1] + 
+                                self.p_d * option_tree_no_hit[j + 1, i + 1]
+                            )
+                    else:
+                        down_val = np.exp(self.stock_tree[j + 1, i + 1])
+                        if down_val <= H:
+                            option_tree_no_hit[j, i] = self.disc * (
+                                self.p_u * option_tree_no_hit[j - 1, i + 1] + 
+                                self.p_m * option_tree_no_hit[j, i + 1] + 
+                                self.p_d * option_tree_hit[j + 1, i + 1]
+                            )
+                        else:
+                            option_tree_no_hit[j, i] = self.disc * (
+                                self.p_u * option_tree_no_hit[j - 1, i + 1] + 
+                                self.p_m * option_tree_no_hit[j, i + 1] + 
+                                self.p_d * option_tree_no_hit[j + 1, i + 1]
+                            )
+        
+        # print("H", np.log(H))
+        # print(option_tree_hit)
+        # print(option_tree_no_hit)
+
+        return option_tree_no_hit[self.n, 0]
 
 
 
@@ -248,13 +311,13 @@ if __name__ == "__main__":
     sigma = 0.25
     r = 0.05
     T = 1
-    steps = 1000
+    steps = 200
 
     bin_tree = BinomialTree(r, sigma, S0, T, steps)
 
     # print(bin_tree.stock_tree)
 
-    print(bin_tree.price_option(K, call=False, american=True))
+    # print(bin_tree.price_option(K, call=True, american=False))
     # print(tree.price_option(K, call=False, american=True))
     # print(tree.price_option(K, call=True, american=False))
     # print(tree.price_option(K, call=True, american=True))
@@ -267,10 +330,19 @@ if __name__ == "__main__":
 
     # print(tree.stock_tree)
 
-    print(tree.price_option(K, call=False, american=True))
-    # print(tree.price_barrier_option_knock_out(K, K + 5, call=False))
-    # print(tree.price_barrier_option_knock_out(K, K + 10, call=False))
-    # print(tree.price_barrier_option_knock_out(K, K + 20, call=False))
+    print(tree.price_option(K, call=False, american=False)) # at 2 steps, 135 is first tier up
+    up_out = tree.price_barrier_option_knock_out(K, K - 50, call=False)
+    up_in = tree.price_barrier_option_knock_in(K, K - 50, call=False)
+    print(up_out)
+    print(up_in)
+    print(up_out + up_in)
+    # print(tree.price_barrier_option_knock_out(K, K + 10, call=True))
+    # print(tree.price_barrier_option_knock_out(K, K + 20, call=True))
+    # print(tree.price_barrier_option_knock_out(K, K + 50, call=True))
+    # print(BlackScholes.up_out_call(S0, K, K + 5, T, r, sigma))
+    # print(BlackScholes.up_out_call(S0, K, K + 10, T, r, sigma))
+    # print(BlackScholes.up_out_call(S0, K, K + 20, T, r, sigma))
+    # print(BlackScholes.up_out_call(S0, K, K + 50, T, r, sigma))
 
 
 

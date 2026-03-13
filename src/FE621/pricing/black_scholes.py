@@ -25,6 +25,18 @@ class BlackScholes:
         d1, d2 = BlackScholes._d1_d2(S, K, t, r, sigma)
         return K * np.exp(-r * t) * norm.cdf(-d2) - S * norm.cdf(-d1)
 
+    @staticmethod
+    def up_out_call(S, K, H, t, r, sigma):
+        v = r - (sigma ** 2) / 2
+        c1 = BlackScholes.call(S, K, t, r, sigma)
+        c2 = BlackScholes.call(S, H, t, r, sigma)
+        d1 = (H - K) * np.exp(-r * t) * norm.cdf((np.log(S / H) + v * t) / (sigma * np.sqrt(t)))
+        c3 = BlackScholes.call((H ** 2) / S, K, t, r, sigma)
+        c4 = BlackScholes.call((H ** 2) / S, H, t, r, sigma)
+        d2 = (H - K) * np.exp(-r * t) * norm.cdf((np.log(H / S) + v * t) / (sigma * np.sqrt(t)))
+        power = ((H / S) ** (2 * v / sigma ** 2))
+        return c1 - c2 - d1 - power * (c3 - c4 - d2)
+
 
     # closed form greeks
     @staticmethod
