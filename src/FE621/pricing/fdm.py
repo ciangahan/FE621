@@ -12,8 +12,9 @@ class ExplicitFD:
     and solving for d_x based on notes from class that the optimal choice matches trinomial tree
     O(∆x^2 + ∆t) convergence
     """
-    def __init__(self, r_f: float, sigma: float, s0: float, T: float, n: int):
+    def __init__(self, r_f: float, div: float, sigma: float, s0: float, T: float, n: int):
         self.r_f = r_f
+        self.div = div
         self.sigma = sigma
         self.s0 = np.log(s0)
         self.T = T
@@ -25,7 +26,7 @@ class ExplicitFD:
 
         # calculate "probabilities" for approximation
         a = (self.sigma / self.d_x) ** 2
-        b = (self.r_f - (self.sigma ** 2) / 2) / self.d_x
+        b = (self.r_f - self.div - (self.sigma ** 2) / 2) / self.d_x
 
         self.p_u = (a + b) * self.dt / 2
         self.p_m = 1 - a * self.dt - self.r_f * self.dt
@@ -55,8 +56,6 @@ class ExplicitFD:
                     self.p_d * price_grid[j + 1, i + 1]
                 )
 
-        # print(price_grid)
-
         return price_grid[self.n, 0]
 
 
@@ -67,7 +66,7 @@ class ImplicitFD:
     O(∆x^2 + ∆t) convergence
     """
     @staticmethod
-    def price_option(S0, K, r, div, sigma, T, N, Nj, dx, call:bool):
+    def price_option(S0, K, r, div, sigma, T, N, Nj, dx, call:bool, american:bool):
         """
         Price option via Implicit Finite Difference Method
         @param S0: initial stock price
@@ -110,12 +109,13 @@ class ImplicitFD:
         for i in reversed(range(N)):
             ImplicitFD.solve_implicit_tridiagonal_system(price_grid, i, pu, pm, pd, lambda_L, lambda_U, Nj)
 
-            if call:
-                for j in range(2 * Nj + 1):
-                    price_grid[j, i] = max(price_grid[j, i], max(stock_prices[j] - K, 0))
-            else:
-                for j in range(2 * Nj + 1):
-                    price_grid[j, i] = max(price_grid[j, i], max(K - stock_prices[j], 0))
+            if american:
+                if call:
+                    for j in range(2 * Nj + 1):
+                        price_grid[j, i] = max(price_grid[j, i], max(stock_prices[j] - K, 0))
+                else:
+                    for j in range(2 * Nj + 1):
+                        price_grid[j, i] = max(price_grid[j, i], max(K - stock_prices[j], 0))
 
         return price_grid[Nj, 0]
 
@@ -149,7 +149,7 @@ class CrankNicolsonFD:
     Crank-Nicolson Finite Difference Method
     """
     @staticmethod
-    def price_option(S0, K, r, div, sigma, T, N, Nj, dx, call:bool):
+    def price_option(S0, K, r, div, sigma, T, N, Nj, dx, call:bool, american:bool):
         """
         Price option via Crank-Nicolson Finite Difference Method
         @param S0: initial stock price
@@ -166,9 +166,9 @@ class CrankNicolsonFD:
         mu = r - div - 0.5 * (sigma ** 2)
         edx = np.exp(dx)
 
-        pu = -0.5 * dt * ((sigma / dx) ** 2 + mu / dx)
-        pm = 1 + dt * (sigma / dx) ** 2 + r * dt
-        pd = -0.5 * dt * ((sigma / dx) ** 2 - mu / dx)
+        pu = -0.25 * dt * ((sigma / dx) ** 2 + mu / dx)
+        pm = 1 + 0.5 * dt * (sigma / dx) ** 2 + 0.5 * r * dt
+        pd = -0.25 * dt * ((sigma / dx) ** 2 - mu / dx)
 
         stock_prices = np.zeros(2 * Nj + 1)
         stock_prices[-1] = S0 * np.exp(-Nj * dx)
@@ -190,30 +190,31 @@ class CrankNicolsonFD:
             lambda_L = stock_prices[-1] - stock_prices[-2]
         
         for i in reversed(range(N)):
-            ImplicitFD.solve_implicit_tridiagonal_system(price_grid, i, pu, pm, pd, lambda_L, lambda_U, Nj)
+            CrankNicolsonFD.solve_cn_tridiagonal_system(price_grid, i, pu, pm, pd, lambda_L, lambda_U, Nj)
 
-            if call:
-                for j in range(2 * Nj + 1):
-                    price_grid[j, i] = max(price_grid[j, i], max(stock_prices[j] - K, 0))
-            else:
-                for j in range(2 * Nj + 1):
-                    price_grid[j, i] = max(price_grid[j, i], max(K - stock_prices[j], 0))
+            if american:
+                if call:
+                    for j in range(2 * Nj + 1):
+                        price_grid[j, i] = max(price_grid[j, i], max(stock_prices[j] - K, 0))
+                else:
+                    for j in range(2 * Nj + 1):
+                        price_grid[j, i] = max(price_grid[j, i], max(K - stock_prices[j], 0))
 
         return price_grid[Nj, 0]
 
 
     @staticmethod
-    def solve_implicit_tridiagonal_system(price_grid, i, pu, pm, pd, lambda_L, lambda_U, Nj):
+    def solve_cn_tridiagonal_system(price_grid, i, pu, pm, pd, lambda_L, lambda_U, Nj):
         # pm primes, p primes when subsitituting up 
         pmp = np.zeros(2 * Nj + 1)
         pp = np.zeros(2 * Nj + 1)
 
         pmp[2 * Nj - 1] = pm + pd
-        pp[2 * Nj - 1] = price_grid[2 * Nj - 1, i + 1] + pd * lambda_L
+        pp[2 * Nj - 1] = -pu * price_grid[2 * Nj - 2, i + 1] - (pm - 2) * price_grid[2 * Nj - 1, i + 1] - pd * price_grid[2 * Nj, i + 1] + pd * lambda_L
 
         for j in np.arange(2 * Nj - 2, 0, -1):
             pmp[j] = pm - pu * pd / pmp[j + 1]
-            pp[j] = price_grid[j, i + 1] - pp[j + 1] * pd/pmp[j + 1]
+            pp[j] = -pu * price_grid[j - 1, i + 1] - (pm - 2) * price_grid[j, i+1] - pd * price_grid[j + 1, i + 1] - pp[j + 1] * pd/pmp[j + 1]
 
         price_grid[0, i] = (pp[1] + pmp[1] * lambda_U) / (pu + pmp[1])
         price_grid[1, i] = price_grid[0, i] - lambda_U
@@ -232,15 +233,16 @@ if __name__ == "__main__":
     sigma = 0.2
     r = 0.06
     T = 1
-    div = 0.00
+    div = 0.0
     steps = 1000
 
     tree = TrinomialTree(r, sigma, S0, T, steps)
-    print(tree.price_option(K, call=True, american=False))
-    print(BlackScholes.call(S0, K, T, r, sigma))
+    print(tree.price_option(K, call=False, american=False))
+    print(BlackScholes.put(S0, K, T, r, sigma))
 
-    efd = ExplicitFD(r, sigma, S0, T, steps)
-    print(efd.price_option(K, call=True))
+    efd = ExplicitFD(r, div, sigma, S0, T, steps)
+    print(efd.price_option(K, call=False))
 
 
-    print(ImplicitFD.price_option(S0, K, r, div, sigma, T, N=1000, Nj=1000, dx=0.002, call=True))
+    print(ImplicitFD.price_option(S0, K, r, div, sigma, T, N=1000, Nj=1000, dx=0.002, call=False, american=False))
+    print(CrankNicolsonFD.price_option(S0, K, r, div, sigma, T, N=1000, Nj=1000, dx=0.002, call=False, american=False))

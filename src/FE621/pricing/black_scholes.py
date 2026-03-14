@@ -7,22 +7,27 @@ from FE621.utils import root_bisection, root_newton
 class BlackScholes:
     # pricing
     @staticmethod
-    def _d1_d2(S, K, t, r, sigma):
+    def _d1_d2(S, K, t, r, div, sigma):
         """
         d1 and d2 helper function
         """
-        d1 = (np.log(S / K) + (r + 0.5 * sigma**2) * t) / (sigma * np.sqrt(t))
+        d1 = (np.log(S / K) + (r - div + 0.5 * sigma**2) * t) / (sigma * np.sqrt(t))
         d2 = d1 - sigma * np.sqrt(t)
         return d1, d2
 
     @staticmethod
     def call(S, K, t, r, sigma):
-        d1, d2 = BlackScholes._d1_d2(S, K, t, r, sigma)
+        d1, d2 = BlackScholes._d1_d2(S, K, t, r, 0, sigma)
         return S * norm.cdf(d1) - K * np.exp(-r * t) * norm.cdf(d2)
+    
+    @staticmethod
+    def div_call(S, K, t, r, div, sigma):
+        d1, d2 = BlackScholes._d1_d2(S, K, t, r, div, sigma)
+        return np.exp(-div * t) * S * norm.cdf(d1) - K * np.exp(-r * t) * norm.cdf(d2)
 
     @staticmethod
     def put(S, K, t, r, sigma):
-        d1, d2 = BlackScholes._d1_d2(S, K, t, r, sigma)
+        d1, d2 = BlackScholes._d1_d2(S, K, t, r, 0, sigma)
         return K * np.exp(-r * t) * norm.cdf(-d2) - S * norm.cdf(-d1)
 
     @staticmethod
