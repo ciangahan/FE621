@@ -56,3 +56,6 @@ data/cleaned/*
 
 # Test
 scratch/*
+
+*.zip
+*.html

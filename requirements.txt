@@ -15,7 +15,7 @@ decorator==5.2.1
 defusedxml==0.7.1
 executing==2.2.1
 fastjsonschema==2.21.2
--e git+ssh://git@github.com/ciangahan/FE621.git@3ba07cf194c5c32ad624402977fb47044cbb03c0#egg=fe621
+-e git+ssh://git@github.com/ciangahan/FE621.git@e684b5d2158ab42a91c89c7f0b46cc0c128c8b96#egg=fe621
 fonttools==4.61.1
 frozendict==2.4.7
 idna==3.11
