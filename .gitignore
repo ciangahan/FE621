@@ -56,6 +56,8 @@ data/cleaned/*
 
 # Test
 scratch/*
+exams/*
+r_hw/*
 
 *.zip
 *.html

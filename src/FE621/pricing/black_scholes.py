@@ -46,12 +46,12 @@ class BlackScholes:
     # closed form greeks
     @staticmethod
     def delta_call(S, K, t, r, sigma):
-        d1, _ = BlackScholes._d1_d2(S, K, t, r, sigma)
+        d1, _ = BlackScholes._d1_d2(S, K, t, r, 0, sigma)
         return norm.cdf(d1)
 
     @staticmethod
     def delta_put(S, K, t, r, sigma):
-        d1, _ = BlackScholes._d1_d2(S, K, t, r, sigma)
+        d1, _ = BlackScholes._d1_d2(S, K, t, r, 0, sigma)
         return norm.cdf(d1) - 1
 
     @staticmethod
