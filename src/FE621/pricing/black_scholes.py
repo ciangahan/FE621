@@ -56,13 +56,23 @@ class BlackScholes:
 
     @staticmethod
     def vega(S, K, t, r, sigma):
-        d1, _ = BlackScholes._d1_d2(S, K, t, r, sigma)
+        d1, _ = BlackScholes._d1_d2(S, K, t, r, 0, sigma)
         return S * norm.pdf(d1) * np.sqrt(t)
     
     @staticmethod
     def gamma(S, K, t, r, sigma):
-        d1, _ = BlackScholes._d1_d2(S, K, t, r, sigma)
+        d1, _ = BlackScholes._d1_d2(S, K, t, r, 0, sigma)
         return norm.pdf(d1) / (S * sigma * np.sqrt(t))
+    
+    @staticmethod
+    def theta_call(S, K, t, r, sigma):
+        d1, d2 = BlackScholes._d1_d2(S, K, t, r, 0, sigma)
+        return (-S * norm.pdf(d1) * sigma) / (2 * np.sqrt(t)) - r * K * np.exp(-r * t) * norm.cdf(d2)
+    
+    @staticmethod
+    def theta_put(S, K, t, r, sigma):
+        d1, d2 = BlackScholes._d1_d2(S, K, t, r, 0, sigma)
+        return (-S * norm.pdf(d1) * sigma) / (2 * np.sqrt(t)) + r * K * np.exp(-r * t) * norm.cdf(-d2)
     
 
     # finite difference approximations of the greeks
@@ -94,42 +104,42 @@ class BlackScholes:
 
     # implied volatility
     @staticmethod
-    def iv_call_bisection(S, K, t, r, mkt_price, log_iter=False):
+    def iv_call_bisection(S, K, t, r, mkt_price, log_iter=False, log_runtime=False):
         # create objective function to find root
         def call_objective(sigma):
             return BlackScholes.call(S, K, t, r, sigma) - mkt_price
 
         # providing conservative bounds to ensure vol is bracketed
-        return root_bisection(call_objective, 0.000001, 20, log_iter=log_iter)
+        return root_bisection(call_objective, 0.001, 3, log_iter=log_iter, log_runtime=log_runtime)
 
     @staticmethod
-    def iv_put_bisection(S, K, t, r, mkt_price, log_iter=False):
+    def iv_put_bisection(S, K, t, r, mkt_price, log_iter=False, log_runtime=False):
         # create objective function to find root
         def put_objective(sigma):
             return BlackScholes.put(S, K, t, r, sigma) - mkt_price
 
         # providing conservative bounds to ensure vol is bracketed
-        return root_bisection(put_objective, 0.000001, 20, log_iter=log_iter)
+        return root_bisection(put_objective, 0.001, 3, log_iter=log_iter, log_runtime=log_runtime)
 
     @staticmethod
-    def iv_call_newton(S, K, t, r, mkt_price, log_iter=False):
+    def iv_call_newton(S, K, t, r, mkt_price, log_iter=False, log_runtime=False):
         def call_objective(sigma):
             return BlackScholes.call(S, K, t, r, sigma) - mkt_price
         
         def call_derivative(sigma):
             return BlackScholes.vega(S, K, t, r, sigma)
         
-        return root_newton(call_objective, call_derivative, 1, log_iter=log_iter)
+        return root_newton(call_objective, call_derivative, 1, log_iter=log_iter, log_runtime=log_runtime)
 
     @staticmethod
-    def iv_put_newton(S, K, t, r, mkt_price, log_iter=False):
+    def iv_put_newton(S, K, t, r, mkt_price, log_iter=False, log_runtime=False):
         def put_objective(sigma):
             return BlackScholes.put(S, K, t, r, sigma) - mkt_price
 
         def put_derivative(sigma):
             return BlackScholes.vega(S, K, t, r, sigma)
 
-        return root_newton(put_objective, put_derivative, 1, log_iter=log_iter)
+        return root_newton(put_objective, put_derivative, 1, log_iter=log_iter, log_runtime=log_runtime)
         
 
 

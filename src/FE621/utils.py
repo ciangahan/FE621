@@ -1,8 +1,9 @@
 import numpy as np
+import time
 
 from collections.abc import Callable
 
-def root_bisection(func:Callable, a:float, b:float, epsilon:float=1e-6, log_iter:bool=False):
+def root_bisection(func:Callable, a:float, b:float, epsilon:float=1e-6, log_iter:bool=False, log_runtime:bool=False):
     """
     Use the bisection method to find the root of a continuous function
     @param func: Objective function
@@ -15,11 +16,14 @@ def root_bisection(func:Callable, a:float, b:float, epsilon:float=1e-6, log_iter
 
     if fa * fb > 0:
         # print(f"Warning: Supplied bounds {a} and {b} do not bracket a root")
-        if log_iter:
+        if log_runtime:
+            return np.nan, np.nan, np.nan
+        elif log_iter:
             return np.nan, np.nan
         else:
             return np.nan
     
+    start = time.perf_counter()
     i = 0
 
     while abs(a - b) > epsilon:
@@ -37,13 +41,16 @@ def root_bisection(func:Callable, a:float, b:float, epsilon:float=1e-6, log_iter
             fa = fmid
             a = mid
 
-    if log_iter:
+    if log_runtime:
+        end = time.perf_counter()
+        return a, i, end - start
+    elif log_iter:
         return a, i
     else:
         return a
 
 
-def root_newton(func:Callable, derivative:Callable, x:float, epsilon:float=1e-6, max_iter:int=100, log_iter:bool=False):
+def root_newton(func:Callable, derivative:Callable, x:float, epsilon:float=1e-6, max_iter:int=100, log_iter:bool=False, log_runtime:bool=False):
     """
     Newton method for root-finding of continuous, differentiable function
     @param func: objective function
@@ -54,11 +61,16 @@ def root_newton(func:Callable, derivative:Callable, x:float, epsilon:float=1e-6,
     @param log_iter: Log/output number of iterations to converge
     """
 
+    start = time.perf_counter()
+
     for i in range(max_iter):
         fx = func(x)
         
         if abs(fx) < epsilon:
-            if log_iter:
+            if log_runtime:
+                end = time.perf_counter()
+                return x, i + 1, end - start
+            elif log_iter:
                 return x, i + 1
             else:
                 return x
@@ -67,7 +79,9 @@ def root_newton(func:Callable, derivative:Callable, x:float, epsilon:float=1e-6,
 
         x = x - fx / fpx
 
-    if log_iter:
+    if log_runtime:
+        return np.nan, np.nan, np.nan
+    elif log_iter:
         return np.nan, np.nan
     else:
         return np.nan

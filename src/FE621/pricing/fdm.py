@@ -58,6 +58,52 @@ class ExplicitFD:
 
         return price_grid[self.n, 0]
 
+    def price_option_truncated(self, K: float, call: bool) -> np.float64:
+        """
+        Price a european option with a smaller grid, truncating price calculations at +/- 3 sigma sqrt(t)
+        """
+        # set bound to truncate price calculations
+        bound = 3 * self.sigma * np.sqrt(self.T)
+        m = min(self.n, int(bound // self.d_x))
+        
+        # truncated price grid
+        price_grid = np.zeros((2 * m + 1, self.n + 1))
+
+        # terminal payoff
+        if call:
+            # above and below bound, calls treated as (price = current payoff val)
+            bound_up = max(np.exp(self.s0 + (m+1) * self.d_x) - K, 0)
+            bound_down = max(np.exp(self.s0 - (m+1) * self.d_x) - K, 0)
+            for j in range(2 * m + 1):
+                price_grid[j, self.n] = max(np.exp(self.s0 + (m - j) * self.d_x) - K, 0)
+        else:
+            # above and below bound, calls treated as (price = current payoff val)
+            bound_up = max(K - np.exp(self.s0 + (m+1) * self.d_x), 0)
+            bound_down = max(K - np.exp(self.s0 - (m+1) * self.d_x), 0)
+            for j in range(2 * m + 1):
+                price_grid[j, self.n] = max(K - np.exp(self.s0 + (m - j) * self.d_x), 0)
+
+        # iterate backwards to calculate discounted expected value at each node
+        for i in reversed(range(self.n)):
+            for j in range(max(m - i, 0), min(m + i + 1, 2 * m + 1)):
+                if j == 0:
+                    price_up = bound_up
+                else:
+                    price_up = price_grid[j - 1, i + 1]
+                
+                if j == 2 * m:
+                    price_down = bound_down
+                else:
+                    price_down = price_grid[j + 1, i + 1]
+                
+                price_grid[j, i] = (
+                    self.p_u * price_up + 
+                    self.p_m * price_grid[j, i + 1] + 
+                    self.p_d * price_down
+                )
+        
+        return price_grid[m, 0]
+
 
 class ImplicitFD:
     """
@@ -242,7 +288,7 @@ if __name__ == "__main__":
 
     efd = ExplicitFD(r, div, sigma, S0, T, steps)
     print(efd.price_option(K, call=False))
-
+    print(efd.price_option_truncated(K, call=False))
 
     print(ImplicitFD.price_option(S0, K, r, div, sigma, T, N=1000, Nj=1000, dx=0.002, call=False, american=False))
     print(CrankNicolsonFD.price_option(S0, K, r, div, sigma, T, N=1000, Nj=1000, dx=0.002, call=False, american=False))
